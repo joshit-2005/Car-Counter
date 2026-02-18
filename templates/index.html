@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YOLO Object Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .upload-area { border: 3px dashed #ccc; padding: 50px; text-align: center; margin: 20px 0; }
+        .upload-area:hover { border-color: #007bff; }
+        input[type="file"] { margin: 20px 0; }
+        button { background: #007bff; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .results { margin-top: 30px; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat-card { background: #f8f9fa; padding: 20px; border-radius: 10px; flex: 1; min-width: 200px; }
+        .total-count { font-size: 2em; font-weight: bold; color: #007bff; }
+        .class-counts { margin-top: 10px; }
+        .class-item { padding: 5px 0; }
+        img { max-width: 100%; height: auto; border-radius: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🕵️ YOLO Object Detection</h1>
+    
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <h3>📁 Upload Image</h3>
+        <p>Click here or drag & drop your image (JPG, PNG)</p>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+    </div>
+    
+    <button onclick="uploadImage()">Detect Objects</button>
+    
+    <div id="results" class="results" style="display: none;">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="total-count" id="totalCount">-</div>
+                <div>Total Objects</div>
+            </div>
+        </div>
+        
+        <div id="detectedImage"></div>
+        <div id="classCounts" class="class-counts"></div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                document.querySelector('.upload-area h3').textContent = e.target.files[0].name;
+            }
+        });
+
+        async function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an image first!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                document.querySelector('button').textContent = 'Detecting...';
+                document.querySelector('button').disabled = true;
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showResults(result);
+                } else {
+                    alert(result.error || 'Detection failed!');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                document.querySelector('button').textContent = 'Detect Objects';
+                document.querySelector('button').disabled = false;
+            }
+        }
+
+        function showResults(data) {
+            document.getElementById('totalCount').textContent = data.total_objects;
+            document.getElementById('results').style.display = 'block';
+
+            // Show detected image
+            document.getElementById('detectedImage').innerHTML = 
+                `<img src="${data.image_url}" alt="Detected Objects">`;
+
+            // Show class counts
+            let classHtml = '<h3>Objects by Type:</h3>';
+            for (let [cls, count] of Object.entries(data.class_counts)) {
+                classHtml += `<div class="class-item"><strong>${cls}:</strong> ${count}</div>`;
+            }
+            document.getElementById('classCounts').innerHTML = classHtml;
+        }
+    </script>
+</body>
+</html>
